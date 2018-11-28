@@ -5,6 +5,25 @@ set a learning period for the rules
 watch for events that match criteria and add to known/seen window
 alert when something that has not been seen before happens on the network
 
+tuning:
+rules have learning window of 1 day currently, can be changed to larger to seem more before alerting
+
+requirements:
+JA3 requires ja3 parser and custom key
+srcmac requires ethernet_oui and custom key
+
+troubleshooting:
+to see this data you need to use esaclient
+ssh to esa host
+``` /opt/rsa/esa/client/bin/esa-client```
+navigate to the windows
+```jmx-cd /CEP/Engine/cepWindows```
+look at the window name to see contents
+```jmx-invoke query --param "select * from whatsNewJA3"```
+or the count
+```jmx-invoke getWindowSize --param whatsNewMACSrc```
+
+
 currently looking at:
 ```
 whats_new_ja3
