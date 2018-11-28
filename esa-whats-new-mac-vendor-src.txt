@@ -1,0 +1,37 @@
+module whatsNewMACVendorSrc;
+
+/*
+Rule Name: What's New for MAC Vendors
+Author: Eric Partington
+Modified: 2018-11-20
+version: 5
+*/
+
+//Update learning phase to desired number of days
+@Name('Named Window - learningWindowMACSrc')
+// disabled the learning phase from being persisted so that when we re-apply the rule we start with a new learning period based on any updated logic in the rule
+//@RSAPersist	
+CREATE VARIABLE integer lPhaseInDaysMACSrc  = 1;
+CREATE WINDOW lPhaseMACSrc.win:length(1) (learningPhase long);
+INSERT INTO lPhaseMACSrc
+SELECT current_timestamp.plus(lPhaseInDaysMACSrc days) as learningPhase FROM PATTERN[Event];
+
+
+//Window to Store New Data
+@Name('Named Window - whatsNewMACSrc')
+@RSAPersist	
+CREATE WINDOW whatsNewMACSrc.win:keepall().std:unique(eth_src_vendor) (eth_src_vendor string, ip_src string, ip_dst string, eth_src string, direction string, time long, medium short);
+
+
+//store in the window
+@Name('Insert new eth_src_vendor')
+INSERT INTO whatsNewMACSrc
+SELECT eth_src_vendor, ip_src, ip_dst, eth_src, direction, time, medium FROM Event(eth_src_vendor IS NOT NULL AND eth_src_vendor NOT IN (SELECT eth_src_vendor FROM whatsNewMACSrc));
+
+
+//compare to client stored in the window
+@RSAAlert
+SELECT eth_src_vendor, ip_src, ip_dst, eth_src, direction, time, medium
+FROM Event(eth_src_vendor NOT IN (SELECT eth_src_vendor FROM whatsNewMACSrc) AND eth_src_vendor IS NOT NULL
+AND current_timestamp > (SELECT learningPhase FROM lPhaseMACSrc))
+OUTPUT ALL EVERY 1 hours;

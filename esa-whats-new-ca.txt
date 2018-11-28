@@ -1,0 +1,36 @@
+module whatsNewCA;
+
+/*
+Rule Name: What's New for cert authorities
+Author: Eric Partington
+Modified: 2018-11-21
+version: 5
+*/
+
+//Update learning phase to desired number of days
+@Name('Named Window - learningWindowCA')
+//@RSAPersist	
+CREATE VARIABLE integer lPhaseInDaysCA = 1;
+CREATE WINDOW lPhaseCA.win:length(1) (learningPhase long);
+INSERT INTO lPhaseCA
+SELECT current_timestamp.plus(lPhaseInDaysCA days) as learningPhase FROM PATTERN[Event];
+
+
+//Window to Store New Data
+@Name('Named Window - whatsNewCA')
+//testing this should be disabled to reset the window on a new push of the rule
+@RSAPersist	
+CREATE WINDOW whatsNewCA.win:keepall().std:unique(ssl_ca) (ssl_ca string, ssl_subject string, ip_src string, ip_dst string, direction string, org_dst string, domain_dst string, alias_host string, medium short, time long, service long);
+
+
+//store in the window
+@Name('Insert CA')
+INSERT INTO whatsNewCA
+SELECT ssl_ca, ssl_subject, ip_src, ip_dst, direction, org_dst, domain_dst, cast(alias_host, string) as alias_host, medium, time, service FROM Event(ssl_ca IS NOT NULL AND ssl_ca NOT IN (SELECT ssl_ca FROM whatsNewCA));
+
+//compare to client stored in the window
+@RSAAlert
+SELECT ssl_ca, ssl_subject , ip_src, ip_dst, direction, org_dst, domain_dst, alias_host, medium, time, service
+FROM Event(ssl_ca NOT IN (SELECT ssl_ca FROM whatsNewCA) AND ssl_ca IS NOT NULL
+AND current_timestamp > (SELECT learningPhase FROM lPhaseCA))
+OUTPUT ALL EVERY 1 hours;

@@ -1,0 +1,36 @@
+module whatsNewSSH1;
+
+/*
+Rule Name: What's New for ssh clients
+Author: Eric Partington
+Modified: 2018-11-14
+version: 5
+*/
+
+//Update learning phase to desired number of days
+@Name('Named Window - learningWindowSSH')
+//@RSAPersist	
+CREATE VARIABLE integer lPhaseInDaysSSH = 1;
+CREATE WINDOW lPhaseSSH.win:length(1) (learningPhase long);
+INSERT INTO lPhaseSSH
+SELECT current_timestamp.plus(lPhaseInDaysSSH days) as learningPhase FROM PATTERN[Event];
+
+
+//Window to Store New Data
+@Name('Named Window - whatsNewSSH1')
+@RSAPersist	
+CREATE WINDOW whatsNewSSH1.win:keepall().std:unique(client) (client string, ip_src string, ip_dst string, direction string, org_dst string, domain_dst string, alias_host string, medium short, server string, time long);
+
+
+//store in the window
+@Name('Insert client')
+INSERT INTO whatsNewSSH1
+SELECT client, ip_src, ip_dst, direction, org_dst, domain_dst, cast(alias_host, string) as alias_host, medium, server, time 
+FROM Event(client IS NOT NULL AND service = 22 AND client NOT IN (SELECT client FROM whatsNewSSH1));
+
+//compare to client stored in the window
+@RSAAlert
+SELECT client, ip_src, ip_dst, direction, org_dst, domain_dst, alias_host, medium, server, time
+FROM Event(client NOT IN (SELECT client FROM whatsNewSSH1) AND client IS NOT NULL AND service = 22
+AND current_timestamp > (SELECT learningPhase FROM lPhaseSSH))
+OUTPUT ALL EVERY 1 hours;

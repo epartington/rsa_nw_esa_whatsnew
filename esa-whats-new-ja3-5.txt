@@ -1,0 +1,37 @@
+module whatsNewsslja3;
+
+/*
+Rule Name: What's New for ssl_ja3
+Author: Eric Partington
+Modified: 2018-11-14
+version: 10
+*/
+
+create schema aliasContainer(my_alias_host string);
+
+//Update learning phase to desired number of days
+@Name('Named Window - learningWindow')
+//@RSAPersist	
+CREATE VARIABLE integer lPhaseInDays = 1;
+CREATE WINDOW lPhase.win:length(1) (learningPhase long);
+INSERT INTO lPhase
+SELECT current_timestamp.plus(lPhaseInDays days) as learningPhase FROM PATTERN[Event];
+
+
+//Window to Store New Data
+@Name('Named Window - whatsNew')
+@RSAPersist	
+CREATE WINDOW whatsNewJA3.win:keepall().std:unique(ssl_ja3) (ssl_ja3 string, ip_src string, ip_dst string, direction string, client string, service long, ssl_subject string, org_dst string, alias_host string, time long, medium short);
+
+
+//store in the window
+@Name('Insert JA3')
+INSERT INTO whatsNewJA3
+SELECT ssl_ja3, ip_src, ip_dst, direction, client, service, ssl_subject, org_dst, cast(alias_host, string) as alias_host, time, medium FROM Event(ssl_ja3 IS NOT NULL AND ssl_ja3 NOT IN (SELECT ssl_ja3 FROM whatsNewJA3));
+
+//compare to ssl_ja3 stored in the window
+@RSAAlert
+SELECT ssl_ja3, ip_src, ip_dst, direction, client, service, ssl_subject, org_dst, alias_host, time, medium
+FROM Event(ssl_ja3 NOT IN (SELECT ssl_ja3 FROM whatsNewJA3) AND ssl_ja3 IS NOT NULL
+AND current_timestamp > (SELECT learningPhase FROM lPhase))
+OUTPUT ALL EVERY 1 hours;

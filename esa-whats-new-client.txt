@@ -1,0 +1,36 @@
+module whatsNewUserAgent;
+
+/*
+Rule Name: What's New for user_agents
+Author: Eric Partington
+Modified: 2018-11-14
+version: 4
+*/
+
+//Update learning phase to desired number of days
+@Name('Named Window - learningWindowClient')
+//@RSAPersist	
+CREATE VARIABLE integer lPhaseInDaysClient = 1;
+CREATE WINDOW lPhaseClient.win:length(1) (learningPhase long);
+INSERT INTO lPhaseClient
+SELECT current_timestamp.plus(lPhaseInDaysClient days) as learningPhase FROM PATTERN[Event];
+
+
+//Window to Store New Data
+@Name('Named Window - whatsNewClient')
+@RSAPersist	
+CREATE WINDOW whatsNewClient.win:keepall().std:unique(client) (client string, ip_src string, ip_dst string, direction string, org_dst string, domain_dst string, alias_host string, medium short, time long);
+
+
+//store in the window
+@Name('Insert client')
+INSERT INTO whatsNewClient
+SELECT client, ip_src, ip_dst, direction, org_dst, domain_dst, cast(alias_host, string) as alias_host, medium, time 
+FROM Event(client IS NOT NULL AND client NOT IN (SELECT client FROM whatsNewClient));
+
+//compare to client stored in the window
+@RSAAlert
+SELECT client, ip_src, ip_dst, direction, org_dst, domain_dst, alias_host, medium, time
+FROM Event(client NOT IN (SELECT client FROM whatsNewClient) AND client IS NOT NULL
+AND current_timestamp > (SELECT learningPhase FROM lPhaseClient))
+OUTPUT ALL EVERY 1 hours;

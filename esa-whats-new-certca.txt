@@ -1,0 +1,36 @@
+module whatsNewCertCA;
+
+/*
+Rule Name: What's New for cert authorities Endpoint
+Author: Eric Partington
+Modified: 2018-11-21
+version: 4
+*/
+
+//Update learning phase to desired number of days
+@Name('Named Window - learningWindowCertCA')
+//@RSAPersist	
+CREATE VARIABLE integer lPhaseInDaysCertCA = 1;
+CREATE WINDOW lPhaseCertCA.win:length(1) (learningPhase long);
+INSERT INTO lPhaseCertCA
+SELECT current_timestamp.plus(lPhaseInDaysCertCA days) as learningPhase FROM PATTERN[Event];
+
+
+//Window to Store New Data
+@Name('Named Window - whatsNewCertCA')
+//testing this should be disabled to reset the window on a new push of the rule
+@RSAPersist	
+CREATE WINDOW whatsNewCertCA.win:keepall().std:unique(cert_ca) (cert_ca string, cert_subject string, alias_ip string, alias_host string, category string, filename string, medium short, time long);
+
+
+//store in the window
+@Name('Insert CA')
+INSERT INTO whatsNewCertCA
+SELECT cert_ca, cert_subject,cast(alias_ip, string) as alias_ip, cast(alias_host, string) as alias_host, category,filename,medium,time FROM Event(cert_ca IS NOT NULL AND cert_ca NOT IN (SELECT cert_ca FROM whatsNewCertCA));
+
+//compare to client stored in the window
+@RSAAlert
+SELECT cert_ca, cert_subject,alias_ip, alias_host,category,filename, medium,time
+FROM Event(cert_ca NOT IN (SELECT cert_ca FROM whatsNewCertCA) AND cert_ca IS NOT NULL
+AND current_timestamp > (SELECT learningPhase FROM lPhaseCertCA))
+OUTPUT ALL EVERY 1 hours;
