@@ -25,6 +25,7 @@ whats_new_ja3
 ```
 whats_new_ssh
 - new ssh client connections
+```
 , {
   "whatsNewSSH1": {
     "client": "OpenSSH_7.4",
@@ -38,10 +39,10 @@ whats_new_ssh
     "server": "OpenSSH_7.4",
     "time": 1543353801
   }
-
+```
 whats_new_client
 - new user agents (log and packets)
-
+```
   "whatsNewClient": {
     "client": "RSA NetWitness",
     "ip_src": "192.168.254.140",
@@ -53,10 +54,11 @@ whats_new_client
     "medium": 1,
     "time": 1543407282
   }
-
+```
 whats_new_srcmac
 - new source mac seen on the network (required eth.src.vendor key and ethernet_oui parser)
-  "whatsNewMACSrc": {
+ ```
+ "whatsNewMACSrc": {
     "eth_src_vendor": "VMware, Inc.",
     "ip_src": "10.15.16.16",
     "ip_dst": "192.168.254.180",
@@ -65,10 +67,11 @@ whats_new_srcmac
     "time": 1543341264,
     "medium": 1
   }
-
+```
 whats_new_ca
 - new ssl.ca values seen on packet traffic
-  "whatsNewCA": {
+ ```
+ "whatsNewCA": {
     "ssl_ca": "Palo Alto Networks",
     "ssl_subject": "Palo Alto Networks",
     "ip_src": "10.20.40.4",
@@ -81,10 +84,11 @@ whats_new_ca
     "time": 1543367239,
     "service": 443
   }
-
+```
 whats_new_certca
 - file certificate ca seen after time for endpoint traffic
-  "whatsNewCertCA": {
+```
+"whatsNewCertCA": {
     "cert_ca": "C=US, S=CA, L=Santa Clara, O=Intel Corporation, CN=Intel External Basic Issuing CA 3B",
     "cert_subject": "C=US, S=CA, L=Santa Clara, O=Intel Corporation, CN=Intel Corporation - Client Components Group",
     "alias_ip": "[192.168.254.170]",
@@ -94,4 +98,4 @@ whats_new_certca
     "medium": 32,
     "time": 1543349842
   }
-
+```
