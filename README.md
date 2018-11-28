@@ -6,7 +6,7 @@ watch for events that match criteria and add to known/seen window
 alert when something that has not been seen before happens on the network
 
 currently looking at:
-
+```
 whats_new_ja3
 - new ja3 hashes after a learning period
   "whatsNewJA3": {
@@ -22,7 +22,7 @@ whats_new_ja3
     "time": 1543406030,
     "medium": 1
   }
-
+```
 whats_new_ssh
 - new ssh client connections
 , {
